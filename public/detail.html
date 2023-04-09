@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" 
+  rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" 
+  crossorigin="anonymous">
+  <link rel="stylesheet" href="main.css">
+</head>
+<body>
+
+  <!-- 인터넷에 9버전은 문법이 잘 안나와서 검색결과가 많은 8.X버전을 쓸 것 -->
+  <!-- 9.X 이상 버전도 있는데 이건 async await import export 등 여러가지 어려운 문법을 사용하기 때문에 우린 8.X버전을 씁시다. -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.5/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.5/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.5/firebase-firestore.js"></script> <!-- firestore : database 연결 -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.5/firebase-storage.js"></script> <!-- 사진, 파일 넣는 공간 -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  
+  
+  <script>
+    // Your web app's Firebase configuration
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZzCe8-pQp7gAIIX3q_Hgd_uULZRwis78",
+      authDomain: "dangenmarket.firebaseapp.com",
+      projectId: "dangenmarket",
+      storageBucket: "dangenmarket.appspot.com",
+      messagingSenderId: "622848989326",
+      appId: "1:622848989326:web:d298ec513a3ec481a451df",
+      measurementId: "G-S1NXS4QFGF"
+    };
+  
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+  </script>
+
+<nav class="navbar navbar-expand-lg bg-body-tertiary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">당근마켓</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+        <div class="navbar-nav">
+          <a class="nav-link active" aria-current="page" href="#">Home</a>
+          <a class="nav-link" href="#">Features</a>
+          <a class="nav-link" href="#">Pricing</a>
+          <a class="nav-link disabled">Disabled</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    상세페이지임
+    <div class="detail-pic my-4"></div>
+    <div>
+      <h5 class = "author">올린사람 : 모름</h5>
+      <hr>
+      <h5 class="title">상품명</h5>
+      <p class="date">올린날짜</p>
+      <p class="price">가격</p>
+      <button id="edit" class = "btn btn-outline-secondary">수정</button> 
+      <!-- 게시물 발행, 웹서비스는 그냥 모두 게시물 발행임 
+           - 언제 개설, 참여자 누구 데이터 필요
+           - 채팅방 게시물 발행 ㄱㄱ(채팅메세지는 게시물 댓글임)-->
+      <!-- 컬렉션 : chatroom, 필드<언제개설, 참여자들 uid(who:[참여자1 uid, 참여자2 uid])> -->
+      <!-- 현재 firebase에서 or, and 연산이 어려움 그래서 from이나 to에 내 uid가 있는거 가져와를 못함 가져올거면 한번에 가져와서 조건해주어야함 -->
+      <!-- 만들 수는 있지만 두번 해주어야해서 복잡하고 귀찮음 -->
+      <button id="chat" class = "btn btn-outline-secondary">채팅</button> 
+    </div>
+  </div>
+
+  <script>
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+    // db.collection('product').doc('상품3').set({제목 : '변기'});
+    // db.collection('product').add({제목 : '변기'});  // 이건 doc명이 랜덤으로 지정됨
+    
+    // 이전 곳의 param 가져오는 방법
+    // 쿼리스트링에 있는 내용들을 Object형으로 이쁘게 정리해서 가져와줌
+    var 쿼리스트링 = new URLSearchParams(window.location.search);
+    
+    db.collection('product').doc(쿼리스트링.get('id')).get().then((result)=>{
+        console.log(result.data());
+        판매자uid = result.data().uid;
+        상품명 = result.data().제목;
+
+        $('.author').html('올린사람 : ' + result.data().이름);
+
+        $('.title').html(result.data().제목);
+        $('.date').html(Date(result.data().날짜));
+        $('.price').html(result.data().가격);
+        $('.detail-pic').html(`<img src = ${result.data().이미지} width = 260px height = 300px>`);
+    })
+
+    $('#edit').click(function () {
+        window.location.href = '/edit.html?id=' + 쿼리스트링.get('id');
+    })
+
+    var 내uid = JSON.parse(localStorage.getItem('user')).uid;
+    var 판매자uid;
+    var 상품명;
+    $('#chat').click(function (e) {
+      e.stopImmediatePropagation(); // 이벤트 버블링 막는 함수, 왜 이걸 해야하는지 강의자도 모르고 나도 모름 구글이 앎
+
+      db.collection('chatroom').where('who', 'array-contains-any', [내uid]).where('product','==',상품명).get().then((result) => {
+        console.log(result.empty);
+        console.log(내uid);
+        console.log(판매자uid);
+        if(result.empty == true) {
+          var 데이터 = {
+            who : [내uid, 판매자uid],
+            product : 상품명,
+            date : new Date(),
+          }
+          db.collection('chatroom').add(데이터);
+          alert("채팅이 생성되었습니다. 다시 채팅버튼을 클릭하시면 채팅창으로 이동됩니다.")
+        } else {
+          alert("채팅방으로 이동됩니다.")
+          window.location.href = "/chat.html";
+        }
+      })
+    })
+    
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" 
+  rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" 
+  crossorigin="anonymous">
+  <link rel="stylesheet" href="main.css">
+</head>
+<body>
+
+  <!-- 인터넷에 9버전은 문법이 잘 안나와서 검색결과가 많은 8.X버전을 쓸 것 -->
+  <!-- 9.X 이상 버전도 있는데 이건 async await import export 등 여러가지 어려운 문법을 사용하기 때문에 우린 8.X버전을 씁시다. -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.5/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.5/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.5/firebase-firestore.js"></script> <!-- firestore : database 연결 -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.5/firebase-storage.js"></script> <!-- 사진, 파일 넣는 공간 -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  
+  
+  <script>
+    // Your web app's Firebase configuration
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZzCe8-pQp7gAIIX3q_Hgd_uULZRwis78",
+      authDomain: "dangenmarket.firebaseapp.com",
+      projectId: "dangenmarket",
+      storageBucket: "dangenmarket.appspot.com",
+      messagingSenderId: "622848989326",
+      appId: "1:622848989326:web:d298ec513a3ec481a451df",
+      measurementId: "G-S1NXS4QFGF"
+    };
+  
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+  </script>
+
+<div class="container p-4 detail">
+    <div class="row">
+    <div class="col-3 p-0">
+        <ul class="list-group chat-list">
+        
+        </ul>
+    </div>
+    <div class="col-9 p-0">
+        <div class="chat-room">
+        <ul class="list-group chat-content">
+            
+        </ul>
+        <div class="input-group">
+            <input class="form-control" id="chat-input">
+            <button class="btn btn-secondary" id="send">전송</button>
+        </div>
+        </div>
+    </div>
+    </div>
+</div> 
+
+  <script>
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+    // db.collection('product').doc('상품3').set({제목 : '변기'});
+    // db.collection('product').add({제목 : '변기'});  // 이건 doc명이 랜덤으로 지정됨
+    
+    // where 쿼리할 떼 사용하는 함수 => where('필드', '연산자', '값')
+    // array값 비교해줄 때에는 안에 있는지 확인 시 array-contains로 연산자 넣어줌
+    // 단일 필드 or연산 : .where('product', 'in', ['고구마', '감자'])
+    // array 필드 or연산 : .where('who', 'array-contains-any', ['고구마', '감자'])
+    // array 필드 에러나는 or연산  :.where(['who', 'from'], 'array-contains-any', ['고구마', '감자'])
+    var 내uid = JSON.parse(localStorage.getItem('user')).uid;
+    var 채팅방id;
+    db.collection('chatroom').where('who', 'array-contains', 내uid).get().then((result) => {
+        result.forEach((a) => { // 여러 데이터들을 하나씩 가져와서 a에 저장함
+            console.log(a.data());
+            var template = `<li class="list-group-item">
+                                <h6>${a.data().product}</h6> 
+                                <h6 class="text-small">${a.id}</h6>
+                            </li>`;
+            $('.chat-list').append(template);
+
+            // 제목을 한번 클릭해도 해당 제목태그와 그 위 태그를 클릭한것이기 때문에 2번 클릭으로 스크립트가 인식하게 됨
+            // ㄴ 이걸 이벤트 버블링이라고 함 궁금하면 찾아보면 됨
+            $('.list-group-item').click(function(e){
+                채팅방id = $(this).children('.text-small').text();
+
+                e.stopImmediatePropagation(); // 이벤트 버블링 막는 함수, 왜 이걸 해야하는지 강의자도 모르고 나도 모름 구글이 앎
+                // .get() 대신에 .onSnapshot을 쓰면 실시간 DB변동이 됨 <- 이게 firebase의 가장 큰 장점
+                // onSnapshot이 한번 읽어올 때 이전거 다 읽어오니까 읽음에 따라 데이터가 많으면 돈을 지불해야하는데 과금 오지는거 아니냐?
+                // ㄴ 아니다 한번 읽어온거면 그걸 재 읽지는 않음 변경된것만 읽어옴
+                // .orderBy() : 데이터 정렬 쿼리문 <asc : 오름차순, desc : 내림차순>
+                db.collection('chatroom').doc(채팅방id).collection('messages').orderBy('date').onSnapshot((result) => {
+                    $('.chat-content').html(``);
+                    result.forEach((a) => {
+                        var 템플릿;
+                        if(a.data().uid == 내uid){
+                            템플릿 = `<li><span class="chat-box mine">${a.data().content}</span></li>`;
+                        } else {
+                            템플릿 = `<li><span class="chat-box">${a.data().content}</span></li>`;
+                        }
+                        $('.chat-content').append(템플릿);
+                    })
+                    $('#chat-input').val('')
+                })
+                
+            })
+        })
+    })
+
+    $('#send').click(function() {
+        var 데이터 = {
+            content : $('#chat-input').val(),
+            date : new Date(),
+            uid : 내uid,
+        }
+
+        db.collection('chatroom').doc(채팅방id).collection('messages').add(데이터)
+    })
+
+    
+  </script>
+</body>
+</html>
+

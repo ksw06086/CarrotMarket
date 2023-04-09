@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" 
+  rel="stylesheet" integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" 
+  crossorigin="anonymous">
+  <link rel="stylesheet" href="main.css">
+</head>
+<body>
+
+  <nav class="navbar navbar-expand-lg bg-body-tertiary">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">당근마켓</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+        <div class="navbar-nav">
+          <a class="nav-link active" aria-current="page" href="#">Home</a>
+          <a class="nav-link" href="#">Features</a>
+          <a class="nav-link" href="#">Pricing</a>
+          <a class="nav-link disabled">Disabled</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 상품명, 글내용, 가격 database에 저장하기 -->
+  <div class="container mt-3">
+    <input type="text" class="form-control mt-2" id="title" placeholder="title">
+    <textarea class="form-control mt-2" id="content">content</textarea>
+    <input type="text" class="form-control mt-2" id="price" placeholder="price">
+    <input class="form-control mt-2" type="file" id="image">
+    <button class="btn btn-danger mt-3" id="send">올리기</button>
+  </div>
+
+  <!-- 인터넷에 9버전은 문법이 잘 안나와서 검색결과가 많은 8.X버전을 쓸 것 -->
+  <!-- 9.X 이상 버전도 있는데 이건 async await import export 등 여러가지 어려운 문법을 사용하기 때문에 우린 8.X버전을 씁시다. -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.5/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.5/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.6.5/firebase-firestore.js"></script> <!-- firestore : database 연결 -->
+  <script src="https://www.gstatic.com/firebasejs/8.6.5/firebase-storage.js"></script> <!-- 사진, 파일 넣는 공간 -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  
+  
+  <script>
+    // Your web app's Firebase configuration
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBZzCe8-pQp7gAIIX3q_Hgd_uULZRwis78",
+      authDomain: "dangenmarket.firebaseapp.com",
+      projectId: "dangenmarket",
+      storageBucket: "dangenmarket.appspot.com",
+      messagingSenderId: "622848989326",
+      appId: "1:622848989326:web:d298ec513a3ec481a451df",
+      measurementId: "G-S1NXS4QFGF"
+    };
+  
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+  </script>
+
+  <script>
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+    // db.collection('product').doc('상품3').set({제목 : '변기'});
+    // db.collection('product').add({제목 : '변기'});  // 이건 doc명이 랜덤으로 지정됨
+    $('#send').click(function() {
+        // 스토리지에 파일 저장하는 문법
+        /// 0. input file타입의 값 찾기 
+        var file = document.querySelector('#image').files[0];
+        /// 1. 폴더 지정해주는 경로 정함
+        var storageRef = storage.ref();
+        var 저장할경로 = storageRef.child('image/' + file.name);
+        /// 2. 저장할 경로에 파일을 올려줌
+        var 업로드작업 = 저장할경로.put(file);
+
+        // 이미지는 사이즈가 커서 업로드 시간이 오래걸림, 다 되었을 때 코드 실행하고 싶을 때가 많음
+        // firebase 사용법일 뿐인데 업로드 작업 중 변화 생겼을 때 코드 실행 가능
+        업로드작업.on( 'state_changed', 
+            // 변화시 동작하는 함수, 얼마나 업로드가 되었는지 확인하고 싶을 때
+            null, 
+            //에러시 동작하는 함수
+            (error) => {
+            console.error('실패사유는', error);
+            }, 
+            // 성공시 동작하는 함수
+            () => {
+                // 이미지의 url 가져오는 함수임
+                업로드작업.snapshot.ref.getDownloadURL().then((url) => {
+                    console.log('업로드된 경로는', url);
+                    if(localStorage.getItem('user')){
+
+                      var 저장객체 = {
+                          제목 : $('#title').val(),
+                          내용 : $('#content').val(),
+                          가격 : $('#price').val(),
+                          날짜 : new Date(),
+                          // 이미지 저장 가능하지만 용량이 매우 커서 따로 저장함 그리고 용량당 요금도 내야하고하니
+                          // 그래서 이미지는 안넣고, 이미지 링크를 여기다가 넣어줄 예정
+                          이미지 : url,
+                          uid : JSON.parse(localStorage.getItem('user')).uid,
+                          이름 : JSON.parse(localStorage.getItem('user')).displayName,
+                      };
+
+                      // then/catch는 자바스크립트에서 try/catch와 같음
+                      db.collection('product').add(저장객체).then((result) => {
+                          // 성공후에 실행할 코드~~
+                          console.log(result);
+                          window.location.href = "/index.html"
+                      }).catch((err) => {
+                          // 실패 후에 실행할 코드~~
+                          console.log(err);
+                      });
+
+                    } else {
+                        alert("로그인 해주세요~!");
+                    }
+                });
+            }
+        );
+    });
+    
+  </script>
+</body>
+</html>
+
